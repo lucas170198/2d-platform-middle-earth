@@ -13,7 +13,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private LayerMask ground;
     [SerializeField] private float speed = 5f;
     [SerializeField] private float jumpForce = 10f;
-    [SerializeField] private float damageIntensity = 1.5f;
+    [SerializeField] private float damageIntensity = 2f;
 
 
     // Player State
@@ -22,8 +22,8 @@ public class PlayerController : MonoBehaviour
     private bool isRolling = false;
     private bool isAttacking = false;
 
-    // Game State TODO move for a better place
-    public int gems = 0;
+    // Game State
+    private int gems = 0;
 
 
     // Start is called before the first frame update
@@ -39,7 +39,6 @@ public class PlayerController : MonoBehaviour
         if(other.tag == "Gem"){
             Destroy(other.gameObject);
             gems += 1;
-
         }
         
     }
@@ -52,21 +51,21 @@ public class PlayerController : MonoBehaviour
         
 
             if(animState == AnimState.falling){
-                Destroy(other.gameObject);
+                //Destroy(other.gameObject);
                 Jump();
             }
             // Take damage
             else {
                 animState = AnimState.takingdamage;
                 // Enemy is on my right
-                if(other.gameObject.transform.position.x > transform.position.x){
-                    rb.velocity = new Vector2(-damageIntensity, rb.velocity.y);
-                }
-                // Enemy on my left
-                else{
-                    rb.velocity = new Vector2(damageIntensity, rb.velocity.y);
+                // if(other.gameObject.transform.position.x > transform.position.x){
+                //     rb.velocity = new Vector2(-damageIntensity, rb.velocity.y);
+                // }
+                // // Enemy on my left
+                // else{
+                //     rb.velocity = new Vector2(damageIntensity, rb.velocity.y);
 
-                }
+                // }
             }
         }
     }

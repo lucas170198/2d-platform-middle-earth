@@ -11,50 +11,25 @@ public class EnemyIA : MonoBehaviour
     //Player State
     private enum EnemyState {idle, patrol, chasing};
     private enum AnimState {idle, walk, die};
-    // private enum Dir2D {left, right};
+    private enum Dir2D {left, right};
 
-    private EnemyState enemyState = EnemyState.idle;
+    //Animation 
     private AnimState animState = AnimState.idle;
     private bool isAttacking = false;
     private bool isTakingDamage = false;
-    [SerializeField] private int health = 2;
-    // private Dir2D currentDirection = Dir2D.left;
-    // private bool playerIsNear = false;
-    // private float actualPlayerDist;
-    // private Dir2D playerDir = Dir2D.left;
+
+    //States
+    [SerializeField] private EnemyState enemyState = EnemyState.idle;
+    private bool playerIsNear = false; //Indicates if the player is on the sensor zone
+    private bool playerIsAhead = false; //Indicates if the player is touching the enemy
+    private int health = 2;
+    private Dir2D enemyDirection = Dir2D.right;
+    private Dir2D playerDirection = Dir2D.left;
 
     // //Serializers
-    // [SerializeField] private float leftWalkLimit; // Limit to walk left without fall
-    // [SerializeField] private float rightWalkLimit; // Limit to walk right without fall
-    // [SerializeField] private float speed = 3f;
-    // [SerializeField] private float distanceToAttack = 1f; //Distance to try attack the player
-
-    // private void OnCollisionEnter2D(Collision2D other) {
-    // }
-
-    // private void OnTriggerEnter2D(Collider2D other) {
-    //     // Near to player
-    //     if(other.tag == "Player"){
-    //         playerIsNear = true;
-    //         actualPlayerDist = Vector2.Distance((Vector2)other.transform.position, (Vector2)transform.position);
-    //         playerDir = GetDir(other.transform.position, transform.position);
-    //     }
-        
-    // }
-
-    // private void OnTriggerStay2D(Collider2D other) {
-    //     //  Keep distance to player update
-    //     if(other.tag == "Player"){
-    //         actualPlayerDist = Vector2.Distance((Vector2)other.transform.position, (Vector2)transform.position);
-    //         playerDir = GetDir(other.transform.position, transform.position);
-    //     }
-    // }
-
-    // private void OnTriggerExit2D(Collider2D other) {
-    //     if(other.tag == "Player"){
-    //         playerIsNear = false;
-    //     }
-    // }
+    [SerializeField] private float leftWalkLimit; // Limit to walk left without fall
+    [SerializeField] private float rightWalkLimit; // Limit to walk right without fall
+    [SerializeField] private float speed = 2f;
 
     // Start is called before the first frame update
     void Start(){
@@ -70,102 +45,109 @@ public class EnemyIA : MonoBehaviour
        
     }
 
+    private void OnCollisionEnter2D(Collision2D other) {
+        if(other.gameObject.tag == "Player"){
+            playerIsAhead = true; //Is in front of the player
+        }
+    }
+
+    private void OnCollisionExit2D(Collision2D other) {
+        if(other.gameObject.tag == "Player"){
+            playerIsAhead = false;
+        }
+    }
+
+    //AI Brain: Process Inputs to decide the current player state
     private void UpdateStateMachine(){
-        // if((enemyState == EnemyState.idle || enemyState == EnemyState.patrol)
-        //     && playerIsNear){
-        //     enemyState = EnemyState.trackling;
-        // }
-        // else if(enemyState == EnemyState.trackling){
-        //     if(!playerIsNear){
-        //         enemyState = EnemyState.patrol;
-        //     }
-        //     else if(actualPlayerDist <= distanceToAttack
-        //             && Random.Range(1, 3) == 2){ // Eventualy attack
-        //         enemyState = EnemyState.attacking;
-
-        //     }
-        // }
-        // else if((enemyState == EnemyState.attacking) 
-        //     && actualPlayerDist > distanceToAttack){
-        //         enemyState = EnemyState.trackling;
-        // }
+        if(playerIsNear){
+            enemyState = EnemyState.chasing;
+            Debug.Log("chasing");
+        }
+        else if(enemyState == EnemyState.chasing || enemyState == EnemyState.patrol){
+            enemyState = EnemyState.patrol;
+            Debug.Log("patrol");
+        }
+        else{
+            enemyState = EnemyState.idle;
+            Debug.Log("idle");
+        }
     }
 
+    // Take actions acording with current state
     private void Act(){
-        // if(enemyState == EnemyState.idle) return;
+        if(enemyState == EnemyState.idle) return;
 
-        // // Just Walk in both directions
-        // if(enemyState == EnemyState.patrol){
-        //     if(ShouldMoveLeft()){
-        //         MoveLeft();
-        //     }
-        //     else if(ShouldMoveRight()){
-        //         MoveRight();
-        //     }
-        // }
-        // // Chase the player
-        // else if(enemyState == EnemyState.trackling){
-        //     if(playerDir == Dir2D.left && (transform.position.x > leftWalkLimit)){
-        //         MoveLeft();
-        //     }
-        //     else if(playerDir == Dir2D.right && transform.position.x < rightWalkLimit){
-        //         MoveRight();
-        //     }
-        // }
-        // // Try to hit the enemy
-        // else if(enemyState == EnemyState.attacking){
-
-
-        // }
+        // Just Walk in both directions
+        if(enemyState == EnemyState.patrol){
+            PatrolMovment();
+        }
+        else if(enemyState == EnemyState.chasing){
+            ChasingPlayer();
+        }
     }
 
-    // private void MoveRight(){
-    //     rb.velocity = new Vector2(speed, rb.velocity.y);
-    //     transform.localScale = new Vector2(1, 1); //Face right
-    // }
+    private void ChasingPlayer(){
+        if(playerDirection == Dir2D.right){
+            transform.localScale = new Vector2(1, 1); //Face right
+            if(playerIsAhead && !isAttacking){// Attack when player is ahead
+                StartCoroutine(Attack());
+            }
+            else if(CanMoveRight() && !isAttacking){ // chasing to player
+                MoveRight();
+            }
+        }
+        else{
+            transform.localScale = new Vector2(-1, 1); //Face left
+            if(playerIsAhead && !isAttacking){// Attack when player is ahead
+                StartCoroutine(Attack());
+            }
+            else if(CanMoveLeft()){
+                MoveLeft();
+            }
+        }
+    }
 
-    // private void MoveLeft(){
-    //     rb.velocity = new Vector2(-speed, rb.velocity.y);
-    //     transform.localScale = new Vector2(-1, 1);
-    // }
+    private void PatrolMovment(){
+        if(enemyDirection == Dir2D.right){
+            if(CanMoveRight()){
+                MoveRight();
+            }
+            else{
+                enemyDirection = Dir2D.left;
+            }
+        }
+        else{
+            if(CanMoveLeft()){
+                MoveLeft();
+            }
+            else{
+                enemyDirection = Dir2D.right;
+            }
+        }
+    }
 
-    // private bool ShouldMoveLeft(){
-    //     if(currentDirection == Dir2D.left){
-    //         if(transform.position.x > leftWalkLimit) return true;
+    private void MoveRight(){
+        rb.velocity = new Vector2(speed, rb.velocity.y);
+        transform.localScale = new Vector2(1, 1); //Face right
+    }
 
-    //         currentDirection = Dir2D.right;
-    //     }
-    //     return false;
-    // }
+    private void MoveLeft(){
+        rb.velocity = new Vector2(-speed, rb.velocity.y);
+        transform.localScale = new Vector2(-1, 1);
+    }
 
-    // private bool ShouldMoveRight(){
-    //     if(currentDirection == Dir2D.right){
-    //         if(transform.position.x < rightWalkLimit) return true;
+    private bool CanMoveRight(){
+        return transform.position.x <= rightWalkLimit;
+    }
 
-    //         currentDirection = Dir2D.left;
-    //     }
-    //     return false;
-    // }
+    private bool CanMoveLeft(){
+        return transform.position.x >= leftWalkLimit;
+    }
 
-    // private Dir2D GetDir(Vector2 otherPos, Vector2 pos){
-    //     return otherPos.x > pos.x ? Dir2D.right : Dir2D.left;
-    // }
-
-
-    /**
-    * Animation related functions
-    */
+    //Play animations
     private void AnimationController(){
         if(health == 0){
             animState = AnimState.die;
-        }
-        else if(isTakingDamage){
-            anim.SetTrigger("damage");
-            return;
-        }
-        else if(isAttacking){
-            anim.SetTrigger("attack");
-            return;
         }
         else if(enemyState == EnemyState.patrol || enemyState == EnemyState.chasing){
             animState = AnimState.walk;
@@ -175,6 +157,12 @@ public class EnemyIA : MonoBehaviour
 
         }
         anim.SetInteger("state", (int) animState);
+    }
+
+    private IEnumerator Attack(){
+        yield return new WaitForSeconds(0.05f); // TODO: Move it to a variable to level control
+        isAttacking = true;
+        anim.SetTrigger("attack");
     }
 
     //Animation events
@@ -193,5 +181,25 @@ public class EnemyIA : MonoBehaviour
 
     public void Die(){
         Destroy(this.gameObject);
+    }
+
+    // External Event
+    public void PlayerEnterZone(){
+        playerIsNear = true;
+    }
+
+    public void PlayerExitZone(){
+        playerIsNear = false;
+    }
+
+    public void UpdatePlayerPosition(Vector2 playerPostion){
+        // Find out if the player is either at left or rigth
+        if(playerPostion.x < transform.position.x){
+            Debug.Log("Player on left");
+            playerDirection = Dir2D.left;
+        }else{
+            playerDirection = Dir2D.right;
+            Debug.Log("Player on right");
+        }
     }
 }
