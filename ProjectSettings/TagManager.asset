@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!78 &1
+TagManager:
+  serializedVersion: 2
+  tags:
+  - Gem
+  - Enemy
+  - Scenario
+  layers:
+  - Default
+  - TransparentFX
+  - Ignore Raycast
+  - 
+  - Water
+  - UI
+  - 
+  - 
+  - Ground
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  m_SortingLayers:
+  - name: Default
+    uniqueID: 0
+    locked: 0
+  - name: L0
+    uniqueID: 2042195789
+    locked: 0
+  - name: L1
+    uniqueID: 1813531707
+    locked: 0
+  - name: L2
+    uniqueID: 2830823595
+    locked: 0
+  - name: L3
+    uniqueID: 4185453687
+    locked: 0
+  - name: Chars
+    uniqueID: 1433862453
+    locked: 0
+  - name: Scene
+    uniqueID: 3241196103
+    locked: 0
