@@ -15,21 +15,23 @@ public class EnemyIA : MonoBehaviour
 
     //Animation 
     private AnimState animState = AnimState.idle;
-    private bool isAttacking = false;
-    private bool isTakingDamage = false;
-
+    [SerializeField] private bool isAttacking = false;
+    [SerializeField] private bool takingDamage = false;
     //States
-    [SerializeField] private EnemyState enemyState = EnemyState.idle;
+    private EnemyState enemyState = EnemyState.idle;
     private bool playerIsNear = false; //Indicates if the player is on the sensor zone
     private bool playerIsAhead = false; //Indicates if the player is touching the enemy
-    private int health = 2;
+    private bool playerIsInAttackRange = false; //Indicates if the attack will hit the player
+    private bool isDeath = false;
     private Dir2D enemyDirection = Dir2D.right;
     private Dir2D playerDirection = Dir2D.left;
+    private int health = 2;
 
     // //Serializers
     [SerializeField] private float leftWalkLimit; // Limit to walk left without fall
     [SerializeField] private float rightWalkLimit; // Limit to walk right without fall
     [SerializeField] private float speed = 2f;
+    [SerializeField] private float attackDistance = 1f; //Range of the attack
 
     // Start is called before the first frame update
     void Start(){
@@ -39,6 +41,7 @@ public class EnemyIA : MonoBehaviour
 
     // Update is called once per frame
     void Update(){
+        if(isDeath) return;
         UpdateStateMachine();
         AnimationController();
         Act();
@@ -61,15 +64,12 @@ public class EnemyIA : MonoBehaviour
     private void UpdateStateMachine(){
         if(playerIsNear){
             enemyState = EnemyState.chasing;
-            Debug.Log("chasing");
         }
         else if(enemyState == EnemyState.chasing || enemyState == EnemyState.patrol){
             enemyState = EnemyState.patrol;
-            Debug.Log("patrol");
         }
         else{
             enemyState = EnemyState.idle;
-            Debug.Log("idle");
         }
     }
 
@@ -146,10 +146,14 @@ public class EnemyIA : MonoBehaviour
 
     //Play animations
     private void AnimationController(){
-        if(health == 0){
-            animState = AnimState.die;
+        if(health <= 0){
+            anim.SetTrigger("die");
+            isDeath = true;
+            return;
         }
-        else if(enemyState == EnemyState.patrol || enemyState == EnemyState.chasing){
+        if(isAttacking || takingDamage) return;
+
+        if(enemyState == EnemyState.patrol || enemyState == EnemyState.chasing){
             animState = AnimState.walk;
         }
         else{
@@ -160,23 +164,36 @@ public class EnemyIA : MonoBehaviour
     }
 
     private IEnumerator Attack(){
-        yield return new WaitForSeconds(0.05f); // TODO: Move it to a variable to level control
+        yield return new WaitForSeconds(0.5f); // TODO: Move it to a variable to level control
+        if(!isAttacking){
+            anim.SetTrigger("attack");
+        }
         isAttacking = true;
-        anim.SetTrigger("attack");
     }
 
     //Animation events
+    public void AttackHitPoint(){
+        if(playerIsInAttackRange){
+            GameObject.FindWithTag("Player").GetComponent<PlayerController>().EnemyAttack();
+        }
+    }
+
     public void EndAttacking(){
-        animState = AnimState.idle;
-        anim.ResetTrigger("attack");
         isAttacking = false;
     }
 
+    public void TakeHit(){
+        if(!takingDamage){
+            anim.SetTrigger("damage");
+            takingDamage = true;
+        }
+
+    }
+
     public void EndDamage(){
-        animState = AnimState.idle;
-        anim.ResetTrigger("damage");
+        takingDamage = false;
         health -= 1;
-        isTakingDamage = false;
+
     }
 
     public void Die(){
@@ -195,11 +212,12 @@ public class EnemyIA : MonoBehaviour
     public void UpdatePlayerPosition(Vector2 playerPostion){
         // Find out if the player is either at left or rigth
         if(playerPostion.x < transform.position.x){
-            Debug.Log("Player on left");
             playerDirection = Dir2D.left;
         }else{
             playerDirection = Dir2D.right;
-            Debug.Log("Player on right");
         }
+
+        //See if it's in the attack range zone
+        playerIsInAttackRange = Vector2.Distance(playerPostion, transform.position) < attackDistance;
     }
 }

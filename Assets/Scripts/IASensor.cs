@@ -7,6 +7,7 @@ public class IASensor : MonoBehaviour
     private void OnTriggerEnter2D(Collider2D other) {
         if(other.tag == "Player"){
             transform.parent.GetComponent<EnemyIA>().PlayerEnterZone();
+            transform.parent.GetComponent<EnemyIA>().UpdatePlayerPosition(other.transform.position);
         }
         
     }

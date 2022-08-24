@@ -17,13 +17,21 @@ public class PlayerController : MonoBehaviour
 
 
     // Player State
-    private enum AnimState {idle, walking, jumping, falling, takingdamage, rolling, attacking};
+    private enum AnimState {idle, walking, rolling};
+
     private AnimState animState = AnimState.idle;
+    private EnemyIA enemy;
     private bool isRolling = false;
     private bool isAttacking = false;
+    private bool isTakingDamage = false;
+    private bool enemyIsNear = false;
+    private bool isJumping = false;
+    private bool isFalling = false;
+    private bool isDeath = false;
 
     // Game State
     private int gems = 0;
+    private int health = 3;
 
 
     // Start is called before the first frame update
@@ -46,46 +54,100 @@ public class PlayerController : MonoBehaviour
     private void OnCollisionEnter2D(Collision2D other) {
         // Colliding with enemies
         if(other.gameObject.tag == "Enemy"){
-            // Don't take hits while is running
-            if(isRolling) return;
-        
-
-            if(animState == AnimState.falling){
-                //Destroy(other.gameObject);
+            enemyIsNear = true;
+            enemy = other.gameObject.GetComponent<EnemyIA>();
+            if(isFalling && enemy != null){
+                enemy.TakeHit();
                 Jump();
-            }
-            // Take damage
-            else {
-                animState = AnimState.takingdamage;
-                // Enemy is on my right
-                // if(other.gameObject.transform.position.x > transform.position.x){
-                //     rb.velocity = new Vector2(-damageIntensity, rb.velocity.y);
-                // }
-                // // Enemy on my left
-                // else{
-                //     rb.velocity = new Vector2(damageIntensity, rb.velocity.y);
+            }  
+        }
+    }
 
-                // }
-            }
+    private void OnCollisionExit2D(Collision2D other) {
+        if(other.gameObject.tag == "Enemy"){
+            enemyIsNear = false;
+            enemy = null;
         }
     }
 
     // Update is called once per frame
     void Update(){
-
+        if(isDeath) return;
         ReadInputMov();
-        UpdateAnimStateMachine();
-        
+        PlayerStateMachine();
+        AnimationController();
     }
 
     private void Jump(){
+        anim.SetTrigger("jump");
         rb.velocity = new Vector2(rb.velocity.x, jumpForce);
-        animState = AnimState.jumping;
+        isJumping = true;
+    }
+
+    private void MoveRigth(){
+        rb.velocity = new Vector2(speed, rb.velocity.y);
+        transform.localScale = new Vector2(1, 1);
+    }
+
+    private void MoveLeft(){
+        rb.velocity = new Vector2(-speed, rb.velocity.y);
+        transform.localScale = new Vector2(-1, 1);
+    }
+
+    private void Attack(){
+        anim.SetTrigger("attack");
+        isAttacking = true;
+        if(enemyIsNear && enemy != null){
+            enemy.TakeHit();
+        }
+    }
+
+    private void TakeHit(){
+        if(!isTakingDamage && !isRolling){
+            anim.SetTrigger("damage");
+            isTakingDamage = true;
+            health -= 1;
+        }
+    }
+
+    //External events
+    public void EndAttacking(){
+        isAttacking = false;
+    }
+
+    public void EnemyAttack(){
+        if(!isRolling){
+            TakeHit();
+        }
+    }
+
+    public void EndDamage(){
+        isTakingDamage = false;
+    }
+
+    public void GameOver(){
+        Debug.Log("Perdeu");
+    }
+
+    private void PlayerStateMachine(){
+        if(isJumping){
+            //Get in the top, start to fall
+            if(rb.velocity.y < Mathf.Epsilon){
+                isJumping = false;
+                isFalling = true;
+            }
+        }
+        else if(isFalling){
+            //Go back to idle after fall
+            if(coll.IsTouchingLayers(ground)){
+                isFalling = false;
+            }
+        }
     }
 
     private void ReadInputMov(){
-        // Dont during some movments
-        if(animState == AnimState.takingdamage || animState == AnimState.attacking) return;
+        // Do nothing during some movments
+        if(isAttacking || isTakingDamage) return;
 
         float hDirection = Input.GetAxis("Horizontal");
         
@@ -95,15 +157,12 @@ public class PlayerController : MonoBehaviour
             isRolling = true;
         }
 
-        // Move foward
         if(hDirection > 0){
-            rb.velocity = new Vector2(speed, rb.velocity.y);
-            transform.localScale = new Vector2(1, 1);
+            MoveRigth();
         }
-        // Move back
+
         else if(hDirection < 0){
-            rb.velocity = new Vector2(-speed, rb.velocity.y);
-            transform.localScale = new Vector2(-1, 1);
+            MoveLeft();
         }
 
         // Jump
@@ -113,48 +172,17 @@ public class PlayerController : MonoBehaviour
         
         // Attack
         if(Input.GetKey(KeyCode.X) && coll.IsTouchingLayers(ground)){
-            isAttacking = true;
+            Attack();
         }
 
     }
 
-    private bool isPlayingAnimation(string stateName) {
-        return anim.GetCurrentAnimatorStateInfo(0).IsName(stateName) &&
-                anim.GetCurrentAnimatorStateInfo(0).normalizedTime < 1.0f;
-    }
-
-    private void UpdateAnimStateMachine(){
-        if(animState == AnimState.jumping){
-            // Get in the top, start to fall
-            if(rb.velocity.y < Mathf.Epsilon){
-                animState = AnimState.falling;
-            }
-            
+    private void AnimationController(){
+        if(health <= 0){
+            anim.SetTrigger("die");
+            isDeath = true;
+            return;
         }
-        else if(animState == AnimState.falling){
-            // Go back to idle after fall
-            if(coll.IsTouchingLayers(ground)){
-                animState = AnimState.idle;
-            }
-        }
-        else if(animState == AnimState.takingdamage){
-            //almost stoping
-            if(Mathf.Abs(rb.velocity.x) < Mathf.Epsilon){
-                animState = AnimState.idle;
-            }
-        }
-        else if(isAttacking){
-            //stop the attack after animation ends
-            if(animState == AnimState.attacking
-              && !isPlayingAnimation("wizard_attack")){
-                isAttacking = false;
-                animState = AnimState.idle;
-            }
-            else{
-                animState = AnimState.attacking;
-            }
-        }
-
         else if(Mathf.Abs(rb.velocity.x) > Mathf.Epsilon){
             if(isRolling){
                 animState = AnimState.rolling;
