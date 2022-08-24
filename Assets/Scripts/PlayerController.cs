@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+
 
 public class PlayerController : MonoBehaviour
 {
@@ -133,6 +135,17 @@ public class PlayerController : MonoBehaviour
 
     public void GameOver(){
         Debug.Log("Perdeu");
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    public void TakeHitBySpines(){
+        anim.SetTrigger("damage");
+        isTakingDamage = true;
+        health -= 1;
+        if(health > 0){ // will die
+            Jump();
+            MoveRigth();
+        }
     }
 
     private void PlayerStateMachine(){
