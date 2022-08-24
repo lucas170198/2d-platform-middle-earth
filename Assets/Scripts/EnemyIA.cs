@@ -9,23 +9,24 @@ public class EnemyIA : MonoBehaviour
     private Rigidbody2D rb;
 
     //Player State
-    private enum EnemyState {idle, patrol, chasing};
+    private enum EnemyState {idle, patrol, chasing, damage, attack, die};
     private enum AnimState {idle, walk, die};
     private enum Dir2D {left, right};
 
     //Animation 
-    private AnimState animState = AnimState.idle;
-    [SerializeField] private bool isAttacking = false;
-    [SerializeField] private bool takingDamage = false;
+     [SerializeField] private AnimState animState = AnimState.idle;
+    private bool canDie = true;
+    private bool canAttack = true;
+    private bool canTakeDamage = true;
     //States
-    private EnemyState enemyState = EnemyState.idle;
+    [SerializeField] private EnemyState enemyState = EnemyState.idle;
     private bool playerIsNear = false; //Indicates if the player is on the sensor zone
     private bool playerIsAhead = false; //Indicates if the player is touching the enemy
     private bool playerIsInAttackRange = false; //Indicates if the attack will hit the player
     private bool isDeath = false;
     private Dir2D enemyDirection = Dir2D.right;
     private Dir2D playerDirection = Dir2D.left;
-    private int health = 2;
+    private int health = 3;
 
     // //Serializers
     [SerializeField] private float leftWalkLimit; // Limit to walk left without fall
@@ -41,7 +42,6 @@ public class EnemyIA : MonoBehaviour
 
     // Update is called once per frame
     void Update(){
-        if(isDeath) return;
         UpdateStateMachine();
         AnimationController();
         Act();
@@ -62,6 +62,15 @@ public class EnemyIA : MonoBehaviour
 
     //AI Brain: Process Inputs to decide the current player state
     private void UpdateStateMachine(){
+        if(health <= 0){
+            enemyState = EnemyState.die;
+        }
+
+        if(enemyState == EnemyState.attack 
+            || enemyState == EnemyState.damage
+            || enemyState == EnemyState.die){
+            return;
+        }
         if(playerIsNear){
             enemyState = EnemyState.chasing;
         }
@@ -75,7 +84,10 @@ public class EnemyIA : MonoBehaviour
 
     // Take actions acording with current state
     private void Act(){
-        if(enemyState == EnemyState.idle) return;
+        if(enemyState == EnemyState.idle 
+            || enemyState == EnemyState.attack 
+            || enemyState == EnemyState.damage 
+            || enemyState == EnemyState.die) return;
 
         // Just Walk in both directions
         if(enemyState == EnemyState.patrol){
@@ -89,17 +101,17 @@ public class EnemyIA : MonoBehaviour
     private void ChasingPlayer(){
         if(playerDirection == Dir2D.right){
             transform.localScale = new Vector2(1, 1); //Face right
-            if(playerIsAhead && !isAttacking){// Attack when player is ahead
-                StartCoroutine(Attack());
+            if(playerIsAhead){// Attack when player is ahead
+                Attack();
             }
-            else if(CanMoveRight() && !isAttacking){ // chasing to player
+            else if(CanMoveRight()){ // chasing to player
                 MoveRight();
             }
         }
         else{
             transform.localScale = new Vector2(-1, 1); //Face left
-            if(playerIsAhead && !isAttacking){// Attack when player is ahead
-                StartCoroutine(Attack());
+            if(playerIsAhead){// Attack when player is ahead
+                Attack();
             }
             else if(CanMoveLeft()){
                 MoveLeft();
@@ -146,29 +158,34 @@ public class EnemyIA : MonoBehaviour
 
     //Play animations
     private void AnimationController(){
-        if(health <= 0){
+        if(enemyState == EnemyState.die && canDie){
             anim.SetTrigger("die");
-            isDeath = true;
-            return;
+            canDie = false;
         }
-        if(isAttacking || takingDamage) return;
-
+        else if(enemyState == EnemyState.attack && canAttack){
+            anim.SetTrigger("attack");
+            canAttack = false;
+        }
+        else if(enemyState == EnemyState.damage && canTakeDamage){
+            anim.SetTrigger("damage");
+            canTakeDamage = false;
+        }
         if(enemyState == EnemyState.patrol || enemyState == EnemyState.chasing){
             animState = AnimState.walk;
+            anim.SetInteger("state", (int) animState);
+
+        }
+        else if(enemyState == EnemyState.idle){
+            animState = AnimState.idle;
+            anim.SetInteger("state", (int) animState);
         }
         else{
-            animState = AnimState.idle;
-
+            Debug.Log("No animation trigger");
         }
-        anim.SetInteger("state", (int) animState);
     }
 
-    private IEnumerator Attack(){
-        yield return new WaitForSeconds(0.5f); // TODO: Move it to a variable to level control
-        if(!isAttacking){
-            anim.SetTrigger("attack");
-        }
-        isAttacking = true;
+    private void Attack(){
+        enemyState = EnemyState.attack;
     }
 
     //Animation events
@@ -179,24 +196,24 @@ public class EnemyIA : MonoBehaviour
     }
 
     public void EndAttacking(){
-        isAttacking = false;
+        enemyState = EnemyState.chasing;
+        canAttack = true;
+        canTakeDamage = true;
     }
 
     public void TakeHit(){
-        if(!takingDamage){
-            anim.SetTrigger("damage");
-            takingDamage = true;
-        }
-
+        enemyState = EnemyState.damage;
     }
 
     public void EndDamage(){
-        takingDamage = false;
+        enemyState = EnemyState.chasing;
         health -= 1;
-
+        canTakeDamage = true;
+        canAttack = true;
     }
 
     public void Die(){
+        enemyState = EnemyState.die;
         Destroy(this.gameObject);
     }
 

@@ -13,7 +13,8 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private LayerMask ground;
     [SerializeField] private float speed = 5f;
     [SerializeField] private float jumpForce = 10f;
-    [SerializeField] private float damageIntensity = 2f;
+    [SerializeField] private float leftLimit = -20f;
+    [SerializeField] private float rightLimit = 20f;
 
 
     // Player State
@@ -28,6 +29,7 @@ public class PlayerController : MonoBehaviour
     private bool isJumping = false;
     private bool isFalling = false;
     private bool isDeath = false;
+    private bool inSecondJump = false;
 
     // Game State
     private int gems = 0;
@@ -57,8 +59,8 @@ public class PlayerController : MonoBehaviour
             enemyIsNear = true;
             enemy = other.gameObject.GetComponent<EnemyIA>();
             if(isFalling && enemy != null){
-                enemy.TakeHit();
                 Jump();
+                MoveLeft();
             }  
         }
     }
@@ -85,13 +87,17 @@ public class PlayerController : MonoBehaviour
     }
 
     private void MoveRigth(){
-        rb.velocity = new Vector2(speed, rb.velocity.y);
-        transform.localScale = new Vector2(1, 1);
+        if(transform.position.x <= rightLimit){
+            rb.velocity = new Vector2(speed, rb.velocity.y);
+            transform.localScale = new Vector2(1, 1);
+        }
     }
 
     private void MoveLeft(){
-        rb.velocity = new Vector2(-speed, rb.velocity.y);
-        transform.localScale = new Vector2(-1, 1);
+        if(transform.position.x >= leftLimit){
+            rb.velocity = new Vector2(-speed, rb.velocity.y);
+            transform.localScale = new Vector2(-1, 1);
+        } 
     }
 
     private void Attack(){
@@ -103,7 +109,7 @@ public class PlayerController : MonoBehaviour
     }
 
     private void TakeHit(){
-        if(!isTakingDamage && !isRolling){
+        if(!isTakingDamage && !isRolling && !isJumping && !isFalling){
             anim.SetTrigger("damage");
             isTakingDamage = true;
             health -= 1;
@@ -141,6 +147,7 @@ public class PlayerController : MonoBehaviour
             //Go back to idle after fall
             if(coll.IsTouchingLayers(ground)){
                 isFalling = false;
+                inSecondJump = false;
             }
         }
     }
@@ -166,8 +173,16 @@ public class PlayerController : MonoBehaviour
         }
 
         // Jump
-        if(Input.GetButtonDown("Jump") && coll.IsTouchingLayers(ground)){
-            Jump();
+        if(Input.GetButtonDown("Jump")){
+            if(coll.IsTouchingLayers(ground)){ // first jump
+                Jump();
+            }
+            else if(!inSecondJump && isFalling){
+                inSecondJump = true;
+                Jump();
+            }
+
+            
         }
         
         // Attack
