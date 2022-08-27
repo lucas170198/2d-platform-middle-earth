@@ -23,7 +23,6 @@ public class EnemyIA : MonoBehaviour
     private bool playerIsNear = false; //Indicates if the player is on the sensor zone
     private bool playerIsAhead = false; //Indicates if the player is touching the enemy
     private bool playerIsInAttackRange = false; //Indicates if the attack will hit the player
-    private bool isDeath = false;
     private Dir2D enemyDirection = Dir2D.right;
     private Dir2D playerDirection = Dir2D.left;
     private int health = 3;
@@ -178,9 +177,6 @@ public class EnemyIA : MonoBehaviour
         else if(enemyState == EnemyState.idle){
             animState = AnimState.idle;
             anim.SetInteger("state", (int) animState);
-        }
-        else{
-            Debug.Log("No animation trigger");
         }
     }
 

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 
 public class PlayerController : MonoBehaviour
@@ -18,6 +19,16 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float leftLimit = -20f;
     [SerializeField] private float rightLimit = 20f;
 
+    //UI hearts
+    [SerializeField] private Image heart1;
+    [SerializeField] private Image heart2;
+    [SerializeField] private Image heart3;
+
+    //UI Gems
+    [SerializeField] private Image gem1;
+    [SerializeField] private Image gem2;
+    [SerializeField] private Image gem3;
+
 
     // Player State
     private enum AnimState {idle, walking, rolling};
@@ -32,6 +43,8 @@ public class PlayerController : MonoBehaviour
     private bool isFalling = false;
     private bool isDeath = false;
     private bool inSecondJump = false;
+    private Stack<Image> hearts;
+    private Queue<Image> gemsImg;
 
     // Game State
     private int gems = 0;
@@ -43,6 +56,21 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>();
         coll = GetComponent<Collider2D>();
+
+        //Initizaling hearts
+        hearts = new Stack<Image>();
+        hearts.Push(heart1);
+        hearts.Push(heart2);
+        hearts.Push(heart3);
+
+        //Initializing gems
+        gem1.enabled = false;
+        gem2.enabled = false;
+        gem3.enabled = false;
+        gemsImg = new Queue<Image>();
+        gemsImg.Enqueue(gem1);
+        gemsImg.Enqueue(gem2);
+        gemsImg.Enqueue(gem3);
         
     }
 
@@ -51,6 +79,8 @@ public class PlayerController : MonoBehaviour
         if(other.tag == "Gem"){
             Destroy(other.gameObject);
             gems += 1;
+            Image gem = gemsImg.Dequeue();
+            gem.enabled = true;
         }
         
     }
@@ -111,11 +141,13 @@ public class PlayerController : MonoBehaviour
     }
 
     private void TakeHit(){
-        if(!isTakingDamage && !isRolling && !isJumping && !isFalling){
-            anim.SetTrigger("damage");
-            isTakingDamage = true;
-            health -= 1;
-        }
+        Image h = hearts.Pop();
+        Destroy(h.gameObject);
+        health -= 1;
+
+        //Trigger die animation
+        anim.SetTrigger("damage");
+        isTakingDamage = true;
     }
 
     //External events
@@ -124,27 +156,30 @@ public class PlayerController : MonoBehaviour
     }
 
     public void EnemyAttack(){
-        if(!isRolling){
+        if(!isTakingDamage && !isRolling && !isJumping && !isFalling){
             TakeHit();
         }
     }
 
     public void EndDamage(){
         isTakingDamage = false;
+
+        if(health <= 0){
+            isDeath = true;
+            anim.SetTrigger("die");
+        }
     }
 
     public void GameOver(){
-        Debug.Log("Perdeu");
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        Destroy(this.gameObject);
+        SceneManager.LoadScene("GameOver");
     }
 
     public void TakeHitBySpines(){
-        anim.SetTrigger("damage");
-        isTakingDamage = true;
-        health -= 1;
-        if(health > 0){ // will die
+        if(isTakingDamage && isDeath) return;
+        TakeHit();
+        if(health > 0){ // Dont jump on the last life
             Jump();
-            MoveRigth();
         }
     }
 
@@ -206,12 +241,7 @@ public class PlayerController : MonoBehaviour
     }
 
     private void AnimationController(){
-        if(health <= 0){
-            anim.SetTrigger("die");
-            isDeath = true;
-            return;
-        }
-        else if(Mathf.Abs(rb.velocity.x) > Mathf.Epsilon){
+        if(Mathf.Abs(rb.velocity.x) > Mathf.Epsilon){
             if(isRolling){
                 animState = AnimState.rolling;
             }
