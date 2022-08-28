@@ -29,6 +29,17 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private Image gem2;
     [SerializeField] private Image gem3;
 
+    //UI Items
+    [SerializeField] private GameObject initalDialog;
+    [SerializeField] private GameObject endLevelDialog;
+
+    //Audio
+    [SerializeField] private AudioSource attackSound;
+    [SerializeField] private AudioSource jumpSound;
+    [SerializeField] private AudioSource hitSound;
+    [SerializeField] private AudioSource gameOverSound;
+    [SerializeField] private AudioSource levelWinSound;
+    [SerializeField] private AudioSource collectItemSound;
 
     // Player State
     private enum AnimState {idle, walking, rolling};
@@ -71,16 +82,34 @@ public class PlayerController : MonoBehaviour
         gemsImg.Enqueue(gem1);
         gemsImg.Enqueue(gem2);
         gemsImg.Enqueue(gem3);
+
+        //Initial dialog
+        initalDialog.SetActive(true);
+        Time.timeScale = 0f;
+        
+        
+    }
+
+    private void CollectGem(GameObject item){
+        Destroy(item);
+        gems += 1;
+
+        Image gem = gemsImg.Dequeue();
+        gem.enabled = true;
+
+        collectItemSound.Play();
+
+        if(gems >= 3){ //Collect 3 Gems to win the first level
+            WinGame();
+        }
         
     }
 
     private void OnTriggerEnter2D(Collider2D other) {
         // Getting a gem
         if(other.tag == "Gem"){
-            Destroy(other.gameObject);
-            gems += 1;
-            Image gem = gemsImg.Dequeue();
-            gem.enabled = true;
+            CollectGem(other.gameObject);
+            
         }
         
     }
@@ -92,7 +121,7 @@ public class PlayerController : MonoBehaviour
             enemy = other.gameObject.GetComponent<EnemyIA>();
             if(isFalling && enemy != null){
                 Jump();
-                MoveLeft();
+                MoveRigth();
             }  
         }
     }
@@ -141,13 +170,15 @@ public class PlayerController : MonoBehaviour
     }
 
     private void TakeHit(){
-        Image h = hearts.Pop();
-        Destroy(h.gameObject);
-        health -= 1;
+        if(hearts.Count > 0){
+            Image h = hearts.Pop();
+            Destroy(h.gameObject);
+            health -= 1;
 
-        //Trigger die animation
-        anim.SetTrigger("damage");
-        isTakingDamage = true;
+            //Trigger die animation
+            anim.SetTrigger("damage");
+            isTakingDamage = true;
+        }
     }
 
     //External events
@@ -171,9 +202,22 @@ public class PlayerController : MonoBehaviour
     }
 
     public void GameOver(){
+        // Time.timeScale = 0f;
+        StartCoroutine(EndGameDelay());
+    }
+
+    public void WinGame(){
+        Time.timeScale = 0f;
+        levelWinSound.Play();
+        endLevelDialog.SetActive(true);
+    }
+
+    private IEnumerator EndGameDelay(){ //To play the music
+        yield return new WaitForSeconds(3);
         Destroy(this.gameObject);
         SceneManager.LoadScene("GameOver");
     }
+
 
     public void TakeHitBySpines(){
         if(isTakingDamage && isDeath) return;
@@ -208,7 +252,7 @@ public class PlayerController : MonoBehaviour
         
         // Rolling
         if((Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) 
-            && Mathf.Abs(hDirection) > 0){
+            && Mathf.Abs(hDirection) > 0 && !isRolling){
             isRolling = true;
         }
 
@@ -255,5 +299,25 @@ public class PlayerController : MonoBehaviour
             isRolling = false;
         }
         anim.SetInteger("state", (int) animState);
+    }
+
+    //Sound event based actions
+    public void JumpSound(){
+        jumpSound.Play();
+
+    }
+
+    public void AttackSound(){
+        attackSound.Play();
+
+    }
+
+    public void TakeHitSound(){
+        hitSound.Play();
+
+    }
+
+    public void GameOverSound(){
+        gameOverSound.Play();
     }
 }

@@ -14,12 +14,13 @@ public class EnemyIA : MonoBehaviour
     private enum Dir2D {left, right};
 
     //Animation 
-     [SerializeField] private AnimState animState = AnimState.idle;
+    private AnimState animState = AnimState.idle;
     private bool canDie = true;
     private bool canAttack = true;
     private bool canTakeDamage = true;
+
     //States
-    [SerializeField] private EnemyState enemyState = EnemyState.idle;
+    private EnemyState enemyState = EnemyState.idle;
     private bool playerIsNear = false; //Indicates if the player is on the sensor zone
     private bool playerIsAhead = false; //Indicates if the player is touching the enemy
     private bool playerIsInAttackRange = false; //Indicates if the attack will hit the player
@@ -32,6 +33,7 @@ public class EnemyIA : MonoBehaviour
     [SerializeField] private float rightWalkLimit; // Limit to walk right without fall
     [SerializeField] private float speed = 2f;
     [SerializeField] private float attackDistance = 1f; //Range of the attack
+    [SerializeField] private AudioSource defeatedSound;
 
     // Start is called before the first frame update
     void Start(){
@@ -158,6 +160,7 @@ public class EnemyIA : MonoBehaviour
     //Play animations
     private void AnimationController(){
         if(enemyState == EnemyState.die && canDie){
+            defeatedSound.Play();
             anim.SetTrigger("die");
             canDie = false;
         }

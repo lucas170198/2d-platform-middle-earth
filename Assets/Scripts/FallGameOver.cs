@@ -17,7 +17,7 @@ public class FallGameOver : MonoBehaviour
     }
     private void OnTriggerEnter2D(Collider2D other) {
         if(other.gameObject.tag == "Player"){
-            Debug.Log("Fall");
+            other.gameObject.GetComponent<PlayerController>().GameOverSound();
             other.gameObject.GetComponent<PlayerController>().GameOver();
         }
     }
