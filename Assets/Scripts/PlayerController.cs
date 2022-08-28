@@ -40,6 +40,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private AudioSource gameOverSound;
     [SerializeField] private AudioSource levelWinSound;
     [SerializeField] private AudioSource collectItemSound;
+    [SerializeField] private GameObject mainSoundTrack;
 
     // Player State
     private enum AnimState {idle, walking, rolling};
@@ -187,7 +188,7 @@ public class PlayerController : MonoBehaviour
     }
 
     public void EnemyAttack(){
-        if(!isTakingDamage && !isRolling && !isJumping && !isFalling){
+        if(!isTakingDamage && !isRolling){
             TakeHit();
         }
     }
@@ -201,13 +202,18 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    private void StopBackGroundSound(){
+        mainSoundTrack.GetComponent<AudioSource>().Stop();
+    }
+
     public void GameOver(){
-        // Time.timeScale = 0f;
+        StopBackGroundSound();
         StartCoroutine(EndGameDelay());
     }
 
     public void WinGame(){
         Time.timeScale = 0f;
+        StopBackGroundSound();
         levelWinSound.Play();
         endLevelDialog.SetActive(true);
     }

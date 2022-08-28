@@ -26,7 +26,7 @@ public class EnemyIA : MonoBehaviour
     private bool playerIsInAttackRange = false; //Indicates if the attack will hit the player
     private Dir2D enemyDirection = Dir2D.right;
     private Dir2D playerDirection = Dir2D.left;
-    private int health = 3;
+    private int health = 5;
 
     // //Serializers
     [SerializeField] private float leftWalkLimit; // Limit to walk left without fall
